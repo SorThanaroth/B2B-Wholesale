@@ -1,0 +1,337 @@
+{
+  "info": {
+    "name": "B2B Wholesale Marketplace API",
+    "description": "Full API for the B2B Wholesale Marketplace (Sections 9.1-9.11).\n\nSETUP\n1. Start infra: `docker compose up -d`\n2. Run app: `SERVER_PORT=8081 ./mvnw spring-boot:run`\n3. baseUrl is preset to http://localhost:8081/api/v1 (change the collection variable if you use another port).\n\nHOW AUTH WORKS\n- Run `Auth > Login (Merchant)` once -> saves the merchant JWT into {{accessToken}}; all merchant requests inherit it.\n- Run `Auth > Login (Admin)` once -> saves the admin JWT into {{adminToken}}; admin requests use it.\n- Test scripts auto-capture ids (productId, orderId, qrToken, companyId, ...) so requests chain.\n\nSUGGESTED ORDER FOR THE CORE FLOW\nLogin (Merchant) -> Products: List -> Cart: Add item A -> Cart: Add item B -> Orders: Checkout -> Payments: Status -> Payments: Callback (PAID) -> Orders: Get order -> Login (Admin) -> Settlements: List.\n\nDemo accounts: admin@b2b.local / Admin@12345  |  merchant@b2b.local / Merchant@12345",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "minOrderQty", "value": "1" },
+    { "key": "productId2", "value": "" },
+    { "key": "minOrderQty2", "value": "1" },
+    { "key": "companyId", "value": "" },
+    { "key": "categoryId", "value": "" },
+    { "key": "addressId", "value": "" },
+    { "key": "cartItemId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "qrToken", "value": "" },
+    { "key": "splitId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth (9.1)",
+      "item": [
+        {
+          "name": "Register (merchant)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Jane Shopkeeper\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"Secret@123\",\n  \"phone\": \"+855120001122\"\n}" }
+          }
+        },
+        {
+          "name": "Login (Merchant)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', j.accessToken);",
+            "pm.collectionVariables.set('refreshToken', j.refreshToken);",
+            "pm.collectionVariables.set('userId', j.userId);",
+            "pm.test('login ok', () => pm.response.code === 200);"
+          ] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"merchant@b2b.local\",\n  \"password\": \"Merchant@12345\"\n}" }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('adminToken', j.accessToken);",
+            "pm.test('admin login ok', () => pm.response.code === 200 && j.role === 'ADMIN');"
+          ] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@b2b.local\",\n  \"password\": \"Admin@12345\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', j.accessToken);",
+            "pm.collectionVariables.set('refreshToken', j.refreshToken);"
+          ] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/verify-email?token=PASTE_TOKEN_FROM_APP_LOG", "host": ["{{baseUrl}}"], "path": ["auth", "verify-email"], "query": [{ "key": "token", "value": "PASTE_TOKEN_FROM_APP_LOG" }] }
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["auth", "forgot-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"merchant@b2b.local\"\n}" }
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"PASTE_RESET_TOKEN_FROM_APP_LOG\",\n  \"newPassword\": \"NewSecret@123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User / Profile (9.2)",
+      "item": [
+        { "name": "Get my profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"] } } },
+        { "name": "Update my profile", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"] }, "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Demo Merchant Updated\",\n  \"phone\": \"+855120009999\"\n}" } } },
+        { "name": "Change password", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/users/me/password", "host": ["{{baseUrl}}"], "path": ["users", "me", "password"] }, "body": { "mode": "raw", "raw": "{\n  \"currentPassword\": \"Merchant@12345\",\n  \"newPassword\": \"Merchant@67890\"\n}" } } },
+        { "name": "List addresses", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/me/addresses", "host": ["{{baseUrl}}"], "path": ["users", "me", "addresses"] } } },
+        {
+          "name": "Add address",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('addressId', j.id);"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/users/me/addresses", "host": ["{{baseUrl}}"], "path": ["users", "me", "addresses"] }, "body": { "mode": "raw", "raw": "{\n  \"label\": \"Shop\",\n  \"street\": \"123 Norodom Blvd\",\n  \"city\": \"Phnom Penh\",\n  \"province\": \"Phnom Penh\",\n  \"isDefault\": true\n}" } }
+        },
+        { "name": "Update address", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/users/me/addresses/{{addressId}}", "host": ["{{baseUrl}}"], "path": ["users", "me", "addresses", "{{addressId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"label\": \"Warehouse\",\n  \"street\": \"456 Monivong Blvd\",\n  \"city\": \"Phnom Penh\",\n  \"province\": \"Phnom Penh\",\n  \"isDefault\": false\n}" } } },
+        { "name": "Delete address", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/users/me/addresses/{{addressId}}", "host": ["{{baseUrl}}"], "path": ["users", "me", "addresses", "{{addressId}}"] } } }
+      ]
+    },
+    {
+      "name": "Companies (9.3)",
+      "item": [
+        {
+          "name": "List companies",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "if (j.content && j.content.length) pm.collectionVariables.set('companyId', j.content[0].id);"
+          ] } }],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/companies?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["companies"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } }
+        },
+        { "name": "Get company", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] } } },
+        {
+          "name": "Create company (ADMIN)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('companyId', j.id);"
+          ] } }],
+          "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/companies", "host": ["{{baseUrl}}"], "path": ["companies"] }, "body": { "mode": "raw", "raw": "{\n  \"name\": \"Mekong Foods Co.\",\n  \"logoUrl\": null,\n  \"bankAccount\": \"WING-999888777\",\n  \"contactEmail\": \"sales@mekongfoods.example\"\n}" } }
+        },
+        { "name": "Update company (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"name\": \"Mekong Foods (Cambodia) Co.\",\n  \"bankAccount\": \"WING-999888777\",\n  \"contactEmail\": \"orders@mekongfoods.example\"\n}" } } },
+        { "name": "Deactivate company (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "DELETE", "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] } } }
+      ]
+    },
+    {
+      "name": "Categories (9.4)",
+      "item": [
+        {
+          "name": "List categories (tree)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "if (Array.isArray(j) && j.length) pm.collectionVariables.set('categoryId', j[0].id);"
+          ] } }],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] } }
+        },
+        { "name": "Get category", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["categories", "{{categoryId}}"] } } },
+        {
+          "name": "Create category (ADMIN)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('categoryId', j.id);"
+          ] } }],
+          "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }, "body": { "mode": "raw", "raw": "{\n  \"name\": \"Condiments\",\n  \"description\": \"Sauces, oils and seasonings\",\n  \"parentId\": null\n}" } }
+        },
+        { "name": "Update category (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["categories", "{{categoryId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"name\": \"Condiments & Sauces\",\n  \"description\": \"Sauces, oils and seasonings\",\n  \"parentId\": null\n}" } } },
+        { "name": "Delete category (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "DELETE", "url": { "raw": "{{baseUrl}}/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["categories", "{{categoryId}}"] } } }
+      ]
+    },
+    {
+      "name": "Products (9.5)",
+      "item": [
+        {
+          "name": "List products (filters)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "if (j.content && j.content[0]) { pm.collectionVariables.set('productId', j.content[0].id); pm.collectionVariables.set('minOrderQty', j.content[0].minOrderQty); }",
+            "if (j.content && j.content[1]) { pm.collectionVariables.set('productId2', j.content[1].id); pm.collectionVariables.set('minOrderQty2', j.content[1].minOrderQty); }"
+          ] } }],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/products?page=0&size=20&search=&minPrice=&maxPrice=", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }, { "key": "company", "value": "", "disabled": true }, { "key": "category", "value": "", "disabled": true }, { "key": "search", "value": "" }, { "key": "minPrice", "value": "" }, { "key": "maxPrice", "value": "" }] } }
+        },
+        { "name": "Get product", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] } } },
+        { "name": "Products by company", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/companies/{{companyId}}/products", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}", "products"] } } },
+        {
+          "name": "Create product (ADMIN)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('productId', j.id);"
+          ] } }],
+          "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }, "body": { "mode": "raw", "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"Soy Sauce 1L (case of 12)\",\n  \"description\": \"Premium soy sauce, 12 x 1L bottles\",\n  \"price\": 18.50,\n  \"minOrderQty\": 4,\n  \"unit\": \"case\",\n  \"stock\": 300,\n  \"imageUrl\": null\n}" } }
+        },
+        { "name": "Update product (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"Soy Sauce 1L (case of 12)\",\n  \"description\": \"Premium soy sauce, 12 x 1L bottles\",\n  \"price\": 17.90,\n  \"minOrderQty\": 4,\n  \"unit\": \"case\",\n  \"stock\": 280,\n  \"imageUrl\": null\n}" } } },
+        { "name": "Deactivate product (ADMIN)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "DELETE", "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] } } },
+        {
+          "name": "Bulk import CSV (ADMIN)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/products/import?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["products", "import"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] },
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": [], "description": "CSV with header: name,price,minOrderQty,unit,stock,description" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart (9.6)",
+      "item": [
+        { "name": "Get cart", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] } } },
+        {
+          "name": "Add item A (uses {{productId}})",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "if (j.companies && j.companies[0] && j.companies[0].items[0]) pm.collectionVariables.set('cartItemId', j.companies[0].items[0].id);"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/cart/items", "host": ["{{baseUrl}}"], "path": ["cart", "items"] }, "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": {{minOrderQty}}\n}" } }
+        },
+        {
+          "name": "Add item B (uses {{productId2}}, 2nd company)",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/cart/items", "host": ["{{baseUrl}}"], "path": ["cart", "items"] }, "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId2}}\",\n  \"quantity\": {{minOrderQty2}}\n}" } }
+        },
+        { "name": "Update cart item", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/cart/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "items", "{{cartItemId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"quantity\": {{minOrderQty}}\n}" } } },
+        { "name": "Remove cart item", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/cart/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "items", "{{cartItemId}}"] } } },
+        { "name": "Clear cart", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] } } }
+      ]
+    },
+    {
+      "name": "Orders (9.7)",
+      "item": [
+        {
+          "name": "Checkout -> unified QR",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('orderId', j.orderId);",
+            "pm.collectionVariables.set('qrToken', j.qrToken);",
+            "pm.test('got QR', () => !!j.qrImageDataUri);"
+          ] } }],
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/orders/checkout", "host": ["{{baseUrl}}"], "path": ["orders", "checkout"] } }
+        },
+        { "name": "My orders", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/orders?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["orders"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Get order detail", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}"] } } },
+        { "name": "Download invoice (PDF)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/invoice", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "invoice"] } } }
+      ]
+    },
+    {
+      "name": "Payments (9.8)",
+      "item": [
+        { "name": "Get QR for order", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/payments/{{orderId}}/qr", "host": ["{{baseUrl}}"], "path": ["payments", "{{orderId}}", "qr"] } } },
+        { "name": "Poll payment status", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/payments/{{orderId}}/status", "host": ["{{baseUrl}}"], "path": ["payments", "{{orderId}}", "status"] } } },
+        {
+          "name": "Gateway callback (PAID) [PUBLIC]",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/payments/callback", "host": ["{{baseUrl}}"], "path": ["payments", "callback"] },
+            "body": { "mode": "raw", "raw": "{\n  \"reference\": \"{{qrToken}}\",\n  \"status\": \"PAID\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin: Orders (9.7)",
+      "item": [
+        { "name": "List all orders", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/orders?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["admin", "orders"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }, { "key": "status", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "from", "value": "2026-01-01T00:00:00Z", "disabled": true }, { "key": "to", "value": "2026-12-31T23:59:59Z", "disabled": true }] } } },
+        { "name": "Get order (admin)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["admin", "orders", "{{orderId}}"] } } },
+        { "name": "Update order status", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/admin/orders/{{orderId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "orders", "{{orderId}}", "status"] }, "body": { "mode": "raw", "raw": "{\n  \"status\": \"SHIPPED\"\n}" } } }
+      ]
+    },
+    {
+      "name": "Admin: Settlements (9.9)",
+      "item": [
+        { "name": "List settlements", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/settlements?page=0&size=20&status=PENDING_SETTLEMENT", "host": ["{{baseUrl}}"], "path": ["admin", "settlements"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }, { "key": "status", "value": "PENDING_SETTLEMENT" }, { "key": "company", "value": "", "disabled": true }] } } },
+        {
+          "name": "Splits for an order",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const j = pm.response.json();",
+            "if (Array.isArray(j) && j.length) pm.collectionVariables.set('splitId', j[0].splitId);"
+          ] } }],
+          "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/settlements/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{orderId}}"] } }
+        },
+        { "name": "Mark split settled", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "url": { "raw": "{{baseUrl}}/admin/settlements/{{splitId}}/settle", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "{{splitId}}", "settle"] } } },
+        { "name": "Export settlement report (CSV)", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/settlements/report", "host": ["{{baseUrl}}"], "path": ["admin", "settlements", "report"] } } }
+      ]
+    },
+    {
+      "name": "Admin: Users (9.10)",
+      "item": [
+        { "name": "List merchants", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/users?page=0&size=20&search=", "host": ["{{baseUrl}}"], "path": ["admin", "users"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }, { "key": "search", "value": "" }] } } },
+        { "name": "Get user", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}"] } } },
+        { "name": "Update user status", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}", "status"] }, "body": { "mode": "raw", "raw": "{\n  \"status\": \"SUSPENDED\"\n}" } } },
+        { "name": "Update user role", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}/role", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}", "role"] }, "body": { "mode": "raw", "raw": "{\n  \"role\": \"MERCHANT\"\n}" } } }
+      ]
+    },
+    {
+      "name": "Dashboards & Reports (9.11)",
+      "item": [
+        { "name": "Merchant dashboard", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/me/dashboard", "host": ["{{baseUrl}}"], "path": ["users", "me", "dashboard"] } } },
+        { "name": "Admin dashboard", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] } } },
+        { "name": "Revenue by company", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/reports/revenue", "host": ["{{baseUrl}}"], "path": ["admin", "reports", "revenue"], "query": [{ "key": "from", "value": "2026-01-01T00:00:00Z", "disabled": true }, { "key": "to", "value": "2026-12-31T23:59:59Z", "disabled": true }] } } },
+        { "name": "Top products", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/reports/products?limit=10", "host": ["{{baseUrl}}"], "path": ["admin", "reports", "products"], "query": [{ "key": "limit", "value": "10" }] } } },
+        { "name": "Merchant activity", "request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }, "method": "GET", "url": { "raw": "{{baseUrl}}/admin/reports/merchants?limit=10", "host": ["{{baseUrl}}"], "path": ["admin", "reports", "merchants"], "query": [{ "key": "limit", "value": "10" }] } } }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Actuator health", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": { "raw": "http://localhost:8081/actuator/health", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["actuator", "health"] } } }
+      ]
+    }
+  ]
+}
