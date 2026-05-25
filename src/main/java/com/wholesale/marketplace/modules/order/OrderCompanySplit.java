@@ -38,6 +38,12 @@ public class OrderCompanySplit {
     @Builder.Default
     private SplitStatus paymentStatus = SplitStatus.PENDING;
 
+    /** Delivery status of this company's share (supplier ships, merchant confirms arrival). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private FulfillmentStatus fulfillmentStatus = FulfillmentStatus.PROCESSING;
+
     private Instant paidAt;
 
     private Instant settledAt;

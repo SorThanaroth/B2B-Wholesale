@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Translates exceptions into the uniform {@link ErrorResponse} shape. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -40,14 +39,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, "Invalid email or password", req);
     }
 
-    /** Pending (not-yet-approved) account login attempt. */
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ErrorResponse> handleDisabled(DisabledException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN,
                 "Your account is pending admin approval. Please try again once it's approved.", req);
     }
 
-    /** Suspended account login attempt. */
     @ExceptionHandler(LockedException.class)
     public ResponseEntity<ErrorResponse> handleLocked(LockedException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN, "Your account has been suspended. Contact an administrator.", req);

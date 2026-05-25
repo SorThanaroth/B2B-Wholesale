@@ -1,0 +1,2 @@
+ALTER TABLE order_company_splits
+    ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING';

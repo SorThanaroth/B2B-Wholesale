@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 import java.util.function.Function;
 
-/** Lightweight, serialization-stable wrapper around Spring Data {@link Page}. */
 public record PageResponse<T>(
         List<T> content,
         int page,
@@ -25,7 +24,6 @@ public record PageResponse<T>(
         );
     }
 
-    /** Map the underlying entity page to a DTO page in one step. */
     public static <E, T> PageResponse<T> from(Page<E> page, Function<E, T> mapper) {
         return new PageResponse<>(
                 page.getContent().stream().map(mapper).toList(),

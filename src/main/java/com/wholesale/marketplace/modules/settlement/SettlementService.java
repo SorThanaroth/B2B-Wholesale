@@ -5,6 +5,7 @@ import com.wholesale.marketplace.common.exception.BadRequestException;
 import com.wholesale.marketplace.common.exception.ResourceNotFoundException;
 import com.wholesale.marketplace.modules.company.Company;
 import com.wholesale.marketplace.modules.company.CompanyRepository;
+import com.wholesale.marketplace.modules.order.FulfillmentStatus;
 import com.wholesale.marketplace.modules.order.OrderCompanySplit;
 import com.wholesale.marketplace.modules.order.OrderCompanySplitRepository;
 import com.wholesale.marketplace.modules.order.SplitStatus;
@@ -64,6 +65,10 @@ public class SettlementService {
         if (split.getPaymentStatus() == SplitStatus.SETTLED) {
             throw new BadRequestException("This split is already settled");
         }
+        // Pay out to the supplier only once the goods have arrived (merchant-confirmed delivery).
+        if (split.getFulfillmentStatus() != FulfillmentStatus.DELIVERED) {
+            throw new BadRequestException("Can only settle once the order has arrived (delivery confirmed by the merchant)");
+        }
         split.setPaymentStatus(SplitStatus.SETTLED);
         split.setSettledAt(Instant.now());
         OrderCompanySplit saved = splitRepository.save(split);
@@ -107,7 +112,8 @@ public class SettlementService {
         Company c = companies.get(s.getCompanyId());
         return new SettlementDto(s.getId(), s.getOrderId(), s.getCompanyId(),
                 c == null ? null : c.getName(), c == null ? null : c.getBankAccount(),
-                s.getSubtotal(), s.getPaymentStatus(), s.getPaidAt(), s.getSettledAt());
+                s.getSubtotal(), s.getPaymentStatus(), s.getFulfillmentStatus(),
+                s.getPaidAt(), s.getSettledAt());
     }
 
     private static String csv(String value) {

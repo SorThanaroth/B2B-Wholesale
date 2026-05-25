@@ -49,8 +49,9 @@ public class AuthService {
     /**
      * Self-registration with role selection. A registrant chooses MERCHANT
      * (buyer) or SUPPLIER (seller); a SUPPLIER also creates their company.
-     * All self-registered accounts (and the supplier's new company) start
-     * PENDING/INACTIVE and require admin approval before they can sign in.
+     * Merchants are ACTIVE immediately (they can sign in right away). Suppliers
+     * start PENDING (and their company INACTIVE) and require admin approval —
+     * sellers are vetted before they can list and get settled.
      */
     @Transactional
     public RegistrationResponse register(RegisterRequest request) {
@@ -84,22 +85,26 @@ public class AuthService {
             companyId = company.getId();
         }
 
+        // Merchants are usable immediately; suppliers await admin approval.
+        UserStatus status = role == Role.SUPPLIER ? UserStatus.PENDING : UserStatus.ACTIVE;
+
         User user = userRepository.save(User.builder()
                 .fullName(request.fullName())
                 .email(request.email().toLowerCase())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .phone(request.phone())
                 .role(role)
-                .status(UserStatus.PENDING)         // awaiting admin approval
+                .status(status)
                 .emailVerified(false)
                 .companyId(companyId)
                 .build());
 
         issueAndLogVerificationLink(user, VerificationTokenType.EMAIL_VERIFY, "/api/v1/auth/verify-email?token=");
-        return new RegistrationResponse(
-                "Registration received. Your account is pending admin approval — "
-                        + "you'll be able to sign in once it's approved.",
-                role, user.getStatus());
+        String message = role == Role.SUPPLIER
+                ? "Registration received. Your supplier account is pending admin approval — "
+                        + "you'll be able to sign in once it's approved."
+                : "Account created — you can sign in now.";
+        return new RegistrationResponse(message, role, user.getStatus());
     }
 
     public AuthResponse login(LoginRequest request) {
