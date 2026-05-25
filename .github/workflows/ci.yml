@@ -1,6 +1,5 @@
 name: CI
 
-# Lives at the Backend repository root — assumes Backend is its own Git repo.
 on:
   push:
     branches: [main, master]
@@ -11,7 +10,6 @@ jobs:
     name: Build & test
     runs-on: ubuntu-latest
 
-    # The Spring context test (contextLoads) boots Flyway + JPA + Redis, so provide them.
     services:
       postgres:
         image: postgres:16
@@ -54,7 +52,9 @@ jobs:
           cache: maven
 
       - name: Build, test & package
-        run: ./mvnw -B verify
+        run: |
+          chmod +x mvnw
+          ./mvnw -B verify
 
       - name: Upload jar artifact
         uses: actions/upload-artifact@v4
@@ -81,11 +81,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR repository names must be lowercase; github.repository can contain uppercase.
+      - name: Compute lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Build & push backend image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
