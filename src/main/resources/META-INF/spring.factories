@@ -1,0 +1,6 @@
+# Registers EnvironmentPostProcessors that run before the ApplicationContext is
+# created. Spring Boot 4 loads these from spring.factories under the new
+# org.springframework.boot.EnvironmentPostProcessor key (the old
+# org.springframework.boot.env.* interface is deprecated for removal).
+org.springframework.boot.EnvironmentPostProcessor=\
+com.wholesale.marketplace.config.RenderDatabaseUrlEnvironmentPostProcessor
