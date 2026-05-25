@@ -11,7 +11,7 @@ services:
       - key: DB_PASSWORD
         value: "rXGesNlCym90k95zn8271W8wpkxqz8YE"
       - key: SERVER_PORT
-        value: "8082"
+        value: "10000"
       - key: REDIS_HOST
         fromService:
           name: marketplace-redis
