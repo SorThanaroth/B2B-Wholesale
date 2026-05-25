@@ -23,6 +23,20 @@ public class CompanyService {
         return PageResponse.from(companyRepository.findByStatus(CompanyStatus.ACTIVE, pageable), CompanyDto::from);
     }
 
+    /** Admin list of ALL companies (active + inactive) — deactivated ones stay visible. */
+    @Transactional(readOnly = true)
+    public PageResponse<CompanyAdminDto> listAll(Pageable pageable) {
+        return PageResponse.from(companyRepository.findAll(pageable), CompanyAdminDto::from);
+    }
+
+    /** Activate / deactivate a company (status only — never deletes the record). */
+    @Transactional
+    public CompanyAdminDto setStatus(UUID id, CompanyStatus status) {
+        Company company = getEntity(id);
+        company.setStatus(status);
+        return CompanyAdminDto.from(companyRepository.save(company));
+    }
+
     @Transactional(readOnly = true)
     public CompanyDto get(UUID id) {
         return CompanyDto.from(getEntity(id));

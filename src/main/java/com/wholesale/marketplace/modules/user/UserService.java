@@ -112,7 +112,9 @@ public class UserService {
                 ? userRepository.findByRole(role, pageable)
                 : userRepository.findByRoleAndFullNameContainingIgnoreCase(role, search, pageable);
         Map<UUID, String> names = companyNames(page.getContent());
-        return PageResponse.from(page, u -> UserProfileDto.from(u, names.get(u.getCompanyId())));
+        // NB: guard the null key — Map.of() (returned when no company ids) rejects get(null) with an NPE.
+        return PageResponse.from(page, u ->
+                UserProfileDto.from(u, u.getCompanyId() == null ? null : names.get(u.getCompanyId())));
     }
 
     @Transactional(readOnly = true)

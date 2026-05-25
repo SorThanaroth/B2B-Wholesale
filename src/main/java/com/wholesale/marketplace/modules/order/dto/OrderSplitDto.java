@@ -1,5 +1,6 @@
 package com.wholesale.marketplace.modules.order.dto;
 
+import com.wholesale.marketplace.modules.order.FulfillmentStatus;
 import com.wholesale.marketplace.modules.order.SplitStatus;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ public record OrderSplitDto(
         String companyName,
         BigDecimal subtotal,
         SplitStatus paymentStatus,
+        FulfillmentStatus fulfillmentStatus,
         Instant paidAt,
         Instant settledAt
 ) {}

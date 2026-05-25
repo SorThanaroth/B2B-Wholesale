@@ -178,10 +178,73 @@ public class OrderService {
 
         List<OrderSplitDto> splitDtos = splits.stream().map(s -> new OrderSplitDto(
                 s.getId(), s.getCompanyId(), companyNames.get(s.getCompanyId()), s.getSubtotal(),
-                s.getPaymentStatus(), s.getPaidAt(), s.getSettledAt())).toList();
+                s.getPaymentStatus(), s.getFulfillmentStatus(), s.getPaidAt(), s.getSettledAt())).toList();
 
         return new OrderDetailDto(order.getId(), order.getUserId(), order.getTotalAmount(),
                 order.getStatus(), order.getPaymentStatus(), order.getQrToken(), order.getCreatedAt(),
                 itemDtos, splitDtos);
+    }
+
+    // ----- per-company fulfilment (supplier ships, merchant confirms arrival) ----
+
+    /**
+     * Sets a split's fulfilment status and rolls the order's overall status up:
+     * any split SHIPPED → order SHIPPED (while PAID); all splits DELIVERED → order DELIVERED.
+     * Never overrides a CANCELLED order.
+     */
+    @Transactional
+    public void setSplitFulfillment(UUID splitId, FulfillmentStatus status) {
+        OrderCompanySplit split = splitRepository.findById(splitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order split", splitId));
+        split.setFulfillmentStatus(status);
+        splitRepository.save(split);
+        recomputeOrderStatus(split.getOrderId());
+    }
+
+    /** Merchant confirms arrival of one supplier's share of their own order. */
+    @Transactional
+    public OrderDetailDto confirmDelivery(UUID userId, UUID orderId, UUID splitId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        OrderCompanySplit split = splitRepository.findById(splitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order split", splitId));
+        if (!split.getOrderId().equals(order.getId())) {
+            throw new BadRequestException("That item does not belong to this order");
+        }
+        setSplitFulfillment(splitId, FulfillmentStatus.DELIVERED);
+        return getMyOrder(userId, orderId);
+    }
+
+    /** Admin override of any split's fulfilment status. */
+    @Transactional
+    public OrderDetailDto adminSetSplitFulfillment(UUID orderId, UUID splitId, FulfillmentStatus status) {
+        OrderCompanySplit split = splitRepository.findById(splitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order split", splitId));
+        if (!split.getOrderId().equals(orderId)) {
+            throw new BadRequestException("That item does not belong to this order");
+        }
+        setSplitFulfillment(splitId, status);
+        return adminGet(orderId);
+    }
+
+    private void recomputeOrderStatus(UUID orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || order.getStatus() == OrderStatus.CANCELLED) return;
+
+        List<OrderCompanySplit> splits = splitRepository.findByOrderId(orderId);
+        if (splits.isEmpty()) return;
+
+        boolean allDelivered = splits.stream()
+                .allMatch(s -> s.getFulfillmentStatus() == FulfillmentStatus.DELIVERED);
+        boolean anyShipped = splits.stream()
+                .anyMatch(s -> s.getFulfillmentStatus() != FulfillmentStatus.PROCESSING);
+
+        if (allDelivered) {
+            order.setStatus(OrderStatus.DELIVERED);
+            orderRepository.save(order);
+        } else if (anyShipped && order.getStatus() == OrderStatus.PAID) {
+            order.setStatus(OrderStatus.SHIPPED);
+            orderRepository.save(order);
+        }
     }
 }

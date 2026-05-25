@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/** Section 9.7 — Orders (merchant-facing). */
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
@@ -40,6 +39,13 @@ public class OrderController {
     @GetMapping("/{id}")
     public OrderDetailDto getOrder(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         return orderService.getMyOrder(user.getId(), id);
+    }
+
+    @PutMapping("/{orderId}/splits/{splitId}/confirm-delivery")
+    public OrderDetailDto confirmDelivery(@AuthenticationPrincipal User user,
+                                          @PathVariable UUID orderId,
+                                          @PathVariable UUID splitId) {
+        return orderService.confirmDelivery(user.getId(), orderId, splitId);
     }
 
     @GetMapping("/{id}/invoice")

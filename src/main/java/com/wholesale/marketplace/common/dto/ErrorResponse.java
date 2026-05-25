@@ -3,7 +3,6 @@ package com.wholesale.marketplace.common.dto;
 import java.time.Instant;
 import java.util.Map;
 
-/** Uniform error body returned by {@code GlobalExceptionHandler}. */
 public record ErrorResponse(
         Instant timestamp,
         int status,
