@@ -75,6 +75,10 @@ public class AuthService {
                     .name(request.companyName())
                     .bankAccount(request.bankAccount())
                     .contactEmail(request.contactEmail())
+                    .registrationNo(request.registrationNo())
+                    .phone(request.companyPhone())
+                    .address(request.companyAddress())
+                    .description(request.companyDescription())
                     .status(CompanyStatus.INACTIVE)   // activated when admin approves the supplier
                     .build());
             companyId = company.getId();

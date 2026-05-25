@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * Seeds a usable demo dataset (admin + merchant + a small catalog) the first
@@ -40,7 +41,10 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (userRepository.countByRole(Role.ADMIN) > 0) {
-            return; // already seeded
+            // Already seeded — but backfill the demo supplier on databases that were
+            // seeded before the supplier role existed (so supplier@b2b.local logs in as SUPPLIER).
+            ensureDemoSupplier();
+            return;
         }
         log.info("[SEED] Empty database detected — seeding demo data");
 
@@ -110,5 +114,36 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("[SEED] Done. Admin: admin@b2b.local / Admin@12345 | Merchant: merchant@b2b.local / Merchant@12345 "
                 + "| Supplier: supplier@b2b.local / Supplier@12345");
+    }
+
+    /**
+     * Idempotently ensures the demo SUPPLIER account exists, linked to a company
+     * (prefers "Angkor Water Co."). Safe to call on every boot — no-ops if present.
+     */
+    private void ensureDemoSupplier() {
+        if (userRepository.findByEmail("supplier@b2b.local").isPresent()) {
+            return;
+        }
+        var companies = companyRepository.findAll();
+        if (companies.isEmpty()) {
+            return; // no company to attach to yet
+        }
+        UUID companyId = companies.stream()
+                .filter(c -> "Angkor Water Co.".equals(c.getName()))
+                .findFirst()
+                .orElse(companies.get(0))
+                .getId();
+
+        userRepository.save(User.builder()
+                .fullName("Angkor Water Rep")
+                .email("supplier@b2b.local")
+                .passwordHash(passwordEncoder.encode("Supplier@12345"))
+                .phone("+855120000001")
+                .role(Role.SUPPLIER)
+                .status(UserStatus.ACTIVE)
+                .emailVerified(true)
+                .companyId(companyId)
+                .build());
+        log.info("[SEED] Backfilled demo supplier: supplier@b2b.local / Supplier@12345 (role SUPPLIER)");
     }
 }

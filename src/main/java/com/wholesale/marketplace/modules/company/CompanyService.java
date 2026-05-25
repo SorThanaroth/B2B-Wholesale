@@ -28,6 +28,12 @@ public class CompanyService {
         return CompanyDto.from(getEntity(id));
     }
 
+    /** Admin view of any company (incl. INACTIVE/pending) — used to review supplier applications. */
+    @Transactional(readOnly = true)
+    public CompanyAdminDto getAdmin(UUID id) {
+        return CompanyAdminDto.from(getEntity(id));
+    }
+
     /** Used by other modules (products, orders) that need the company aggregate. */
     @Transactional(readOnly = true)
     public Company getEntity(UUID id) {
@@ -42,6 +48,10 @@ public class CompanyService {
                 .logoUrl(req.logoUrl())
                 .bankAccount(req.bankAccount())
                 .contactEmail(req.contactEmail())
+                .registrationNo(req.registrationNo())
+                .phone(req.phone())
+                .address(req.address())
+                .description(req.description())
                 .status(CompanyStatus.ACTIVE)
                 .build();
         return CompanyAdminDto.from(companyRepository.save(company));
@@ -54,6 +64,10 @@ public class CompanyService {
         company.setLogoUrl(req.logoUrl());
         company.setBankAccount(req.bankAccount());
         company.setContactEmail(req.contactEmail());
+        company.setRegistrationNo(req.registrationNo());
+        company.setPhone(req.phone());
+        company.setAddress(req.address());
+        company.setDescription(req.description());
         return CompanyAdminDto.from(companyRepository.save(company));
     }
 

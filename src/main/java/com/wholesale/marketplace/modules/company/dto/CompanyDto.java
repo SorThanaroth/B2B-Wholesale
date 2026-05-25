@@ -12,11 +12,14 @@ public record CompanyDto(
         String name,
         String logoUrl,
         String contactEmail,
+        String phone,
+        String address,
+        String description,
         CompanyStatus status,
         Instant createdAt
 ) {
     public static CompanyDto from(Company c) {
         return new CompanyDto(c.getId(), c.getName(), c.getLogoUrl(), c.getContactEmail(),
-                c.getStatus(), c.getCreatedAt());
+                c.getPhone(), c.getAddress(), c.getDescription(), c.getStatus(), c.getCreatedAt());
     }
 }
