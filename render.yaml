@@ -4,19 +4,14 @@ services:
     runtime: docker
     plan: free
     envVars:
-      # Database — hardcoded JDBC URL from your Render PostgreSQL
       - key: DB_URL
         value: "jdbc:postgresql://dpg-d8a2uc8jo6nc73ebmk20-a/b2b_wholesale"
       - key: DB_USER
         value: "b2b_wholesale_user"
       - key: DB_PASSWORD
         value: "rXGesNlCym90k95zn8271W8wpkxqz8YE"
-
-      # Port — Render scans for this
       - key: SERVER_PORT
         value: "8082"
-
-      # Redis
       - key: REDIS_HOST
         fromService:
           name: marketplace-redis
@@ -27,8 +22,6 @@ services:
           name: marketplace-redis
           type: redis
           property: port
-
-      # JWT
       - key: JWT_SECRET
         generateValue: true
 
@@ -36,8 +29,3 @@ services:
     name: marketplace-redis
     plan: free
     ipAllowList: []
-
-databases:
-  - name: marketplace-db
-    plan: free
-    databaseName: b2b_wholesale

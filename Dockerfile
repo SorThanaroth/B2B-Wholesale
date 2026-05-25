@@ -17,4 +17,4 @@ ENV SERVER_PORT=8082
 COPY --from=build /app/target/*-SNAPSHOT.jar app.jar
 EXPOSE 8082
 # ENTRYPOINT ["java", "-jar", "/app/app.jar"]
-ENTRYPOINT ["sh", "-c", "java -jar /app/app.jar --server.port=${PORT:-8082}"]\
+ENTRYPOINT ["sh", "-c", "java -jar /app/app.jar --server.port=${SERVER_PORT:-8082}"]
