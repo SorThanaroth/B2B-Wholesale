@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -72,8 +75,27 @@ public class JwtService {
                 .getBody();
     }
 
+    /**
+     * Derives a 256-bit HMAC key from {@code jwt.secret}, accepting ANY secret value
+     * (a deploy platform's generated secret may not be valid Base64). Tries Base64
+     * first; if that yields fewer than 32 bytes (or isn't valid Base64), falls back
+     * to SHA-256 of the raw secret — always a valid 256-bit HS256 key.
+     */
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (RuntimeException notBase64) {
+            keyBytes = new byte[0];
+        }
+        if (keyBytes.length < 32) {
+            try {
+                keyBytes = MessageDigest.getInstance("SHA-256")
+                        .digest(secretKey.getBytes(StandardCharsets.UTF_8));
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException("SHA-256 unavailable", e);
+            }
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

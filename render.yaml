@@ -1,31 +1,39 @@
+databases:
+  - name: marketplace-db
+    databaseName: b2b_wholesale
+    user: b2b_wholesale_user
+    plan: free
+    region: singapore
+
 services:
   - type: web
     name: marketplace-api
     runtime: docker
     plan: free
+    region: singapore        # MUST match the database region
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
     envVars:
-      - key: DB_URL
-        value: "jdbc:postgresql://dpg-d8a2uc8jo6nc73ebmk20-a/b2b_wholesale"
+      # --- Postgres (composed into spring.datasource.url by the app) ---
+      - key: DB_HOST
+        fromDatabase: { name: marketplace-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: marketplace-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: marketplace-db, property: database }
       - key: DB_USER
-        value: "b2b_wholesale_user"
+        fromDatabase: { name: marketplace-db, property: user }
       - key: DB_PASSWORD
-        value: "rXGesNlCym90k95zn8271W8wpkxqz8YE"
-      - key: SERVER_PORT
-        value: "10000"
-      - key: REDIS_HOST
-        fromService:
-          name: marketplace-redis
-          type: redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          name: marketplace-redis
-          type: redis
-          property: port
+        fromDatabase: { name: marketplace-db, property: password }
+      # --- JWT secret (auto-generated; any value is accepted via the SHA-256 fallback) ---
       - key: JWT_SECRET
         generateValue: true
+      # --- CORS: set to your deployed frontend origin (comma-separate multiples) ---
+      #     e.g. https://marketplace-web.onrender.com
+      - key: APP_CORS_ORIGINS
+        sync: false
 
-  - type: redis
-    name: marketplace-redis
-    plan: free
-    ipAllowList: []
+# Redis is intentionally omitted — it isn't used by the app, and its health
+# indicator is disabled (management.health.redis.enabled=false). Add a
+# `type: redis` service + REDIS_HOST/REDIS_PORT later only if you introduce caching.
