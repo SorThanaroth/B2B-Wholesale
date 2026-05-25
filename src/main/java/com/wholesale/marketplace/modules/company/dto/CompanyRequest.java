@@ -7,5 +7,10 @@ public record CompanyRequest(
         @NotBlank(message = "Company name is required") String name,
         String logoUrl,
         @NotBlank(message = "Bank account is required for settlement") String bankAccount,
-        @Email(message = "Contact email must be valid") String contactEmail
+        @Email(message = "Contact email must be valid") String contactEmail,
+        // KYC / profile detail for review
+        String registrationNo,
+        String phone,
+        String address,
+        String description
 ) {}

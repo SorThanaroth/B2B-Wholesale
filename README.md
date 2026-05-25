@@ -48,7 +48,30 @@ Health check: `GET /actuator/health`.
 > its company automatically. List by role with `GET /api/v1/admin/users?role=SUPPLIER`.
 >
 > Supplier portal endpoints live under `/api/v1/supplier/**` (own products/orders/settlements,
-> company-scoped). The demo accounts above are seeded only on a fresh DB.
+> company-scoped). The demo admin/merchant are seeded only on a fresh DB; the demo **supplier is
+> backfilled idempotently** on every boot (so `supplier@b2b.local` always logs in as SUPPLIER).
+>
+> *Supplier review (v1.1).* Suppliers submit company KYC detail at registration — business
+> registration no., phone, address, description (migration `V4`) plus settlement bank account.
+> Admins review the full company via `GET /api/v1/companies/{id}/admin` (any status) before approving.
+
+> **Note on roles:** the login response's `role` is taken verbatim from the `users.role` column. If a
+> supplier email logs in as MERCHANT, that row is MERCHANT — typically because it was created by an
+> older build or the server/DB wasn't rebuilt/migrated. Rebuild + restart so Flyway applies `V3`/`V4`
+> and the seeder backfills the demo supplier; create custom suppliers via self-registration (role
+> SUPPLIER) or the admin **Suppliers** screen.
+
+## CI/CD & Docker
+
+- **`Dockerfile`** — multi-stage build (Temurin 21 JDK → JRE), produces a runnable jar image on `:8082`.
+- **`.github/workflows/ci.yml`** (at this Backend repo's root) — on push/PR: JDK 21 + Maven cache,
+  spins up **Postgres + Redis** service containers, runs `./mvnw -B verify` (the `contextLoads` test
+  boots the full app), and uploads the jar. On push to `main`/`master` it builds and pushes the image
+  to **GHCR** (`ghcr.io/<owner>/<repo>`).
+
+  > GitHub Actions only runs workflows from `.github/workflows/` at a repository root, so this assumes
+  > **Backend is its own Git repo**. If instead Backend + Frontend share one repo, move both `ci.yml`
+  > files to the root `.github/workflows/` and scope them with `paths:` + `working-directory`.
 
 ## End-to-end smoke test
 

@@ -28,8 +28,12 @@ public record RegisterRequest(
         /** MERCHANT or SUPPLIER. Null/ADMIN treated as MERCHANT-only at the service. */
         Role role,
 
-        // ----- supplier-only (creates the company) -----
+        // ----- supplier-only (creates the company; admins review these before approval) -----
         String companyName,
         String bankAccount,
-        String contactEmail
+        String contactEmail,
+        String registrationNo,
+        String companyPhone,
+        String companyAddress,
+        String companyDescription
 ) {}

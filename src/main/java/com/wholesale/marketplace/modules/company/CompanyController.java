@@ -33,6 +33,13 @@ public class CompanyController {
         return companyService.get(id);
     }
 
+    /** Admin-only full company detail (any status) — for reviewing supplier applications. */
+    @GetMapping("/{id}/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CompanyAdminDto getAdmin(@PathVariable UUID id) {
+        return companyService.getAdmin(id);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)

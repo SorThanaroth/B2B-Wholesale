@@ -31,6 +31,18 @@ public class Company {
 
     private String contactEmail;
 
+    // ----- profile / KYC details (used by admins to review supplier applications) -----
+    /** Business registration / license number. */
+    private String registrationNo;
+
+    private String phone;
+
+    @Column(columnDefinition = "text")
+    private String address;
+
+    @Column(columnDefinition = "text")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
