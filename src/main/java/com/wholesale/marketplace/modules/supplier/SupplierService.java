@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 public class SupplierService {
 
     private final ProductService productService;
+    private final OrderService orderService;
     private final CompanyRepository companyRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -126,9 +127,25 @@ public class SupplierService {
                         i.getCompanyId(), companyName, i.getQuantity(), i.getUnitPrice(), i.getSubtotal()))
                 .toList();
 
-        return new SupplierOrderDetailDto(order.getId(), order.getCreatedAt(), order.getStatus(),
-                order.getPaymentStatus(), split.getSubtotal(), split.getPaymentStatus(),
-                split.getPaidAt(), split.getSettledAt(), items);
+        return new SupplierOrderDetailDto(order.getId(), split.getId(), order.getCreatedAt(),
+                order.getStatus(), order.getPaymentStatus(), split.getSubtotal(), split.getPaymentStatus(),
+                split.getFulfillmentStatus(), split.getPaidAt(), split.getSettledAt(), items);
+    }
+
+    /**
+     * Supplier updates the delivery status of their own share of an order
+     * (PROCESSING/SHIPPED only — confirming arrival is the merchant's action).
+     */
+    @Transactional
+    public SupplierOrderDetailDto updateFulfillment(User user, UUID orderId, FulfillmentStatus status) {
+        if (status == FulfillmentStatus.DELIVERED) {
+            throw new BadRequestException("Only the merchant can confirm delivery (arrival)");
+        }
+        UUID companyId = requireCompanyId(user);
+        OrderCompanySplit split = splitRepository.findByOrderIdAndCompanyId(orderId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        orderService.setSplitFulfillment(split.getId(), status);
+        return getOrder(user, orderId);
     }
 
     // ----- settlements ---------------------------------------------------
@@ -157,6 +174,8 @@ public class SupplierService {
                     o.getId(), o.getCreatedAt(), o.getStatus(), o.getPaymentStatus(),
                     s == null ? BigDecimal.ZERO : s.getSubtotal(),
                     s == null ? null : s.getPaymentStatus(),
+                    s == null ? null : s.getFulfillmentStatus(),
+                    s == null ? null : s.getId(),
                     s == null ? null : s.getPaidAt());
         }).toList();
 

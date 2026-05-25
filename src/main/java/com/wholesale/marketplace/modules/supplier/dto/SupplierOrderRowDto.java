@@ -1,5 +1,6 @@
 package com.wholesale.marketplace.modules.supplier.dto;
 
+import com.wholesale.marketplace.modules.order.FulfillmentStatus;
 import com.wholesale.marketplace.modules.order.OrderStatus;
 import com.wholesale.marketplace.modules.order.SplitStatus;
 import com.wholesale.marketplace.modules.payment.PaymentStatus;
@@ -16,5 +17,7 @@ public record SupplierOrderRowDto(
         PaymentStatus paymentStatus,
         BigDecimal companySubtotal,
         SplitStatus settlementStatus,
+        FulfillmentStatus fulfillmentStatus,
+        UUID splitId,
         Instant paidAt
 ) {}

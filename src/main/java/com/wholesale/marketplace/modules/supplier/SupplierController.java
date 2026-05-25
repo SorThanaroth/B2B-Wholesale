@@ -5,6 +5,7 @@ import com.wholesale.marketplace.modules.auth.User;
 import com.wholesale.marketplace.modules.company.dto.CompanyDto;
 import com.wholesale.marketplace.modules.order.OrderStatus;
 import com.wholesale.marketplace.modules.order.SplitStatus;
+import com.wholesale.marketplace.modules.order.dto.UpdateFulfillmentRequest;
 import com.wholesale.marketplace.modules.product.dto.ImportResult;
 import com.wholesale.marketplace.modules.product.dto.ProductDto;
 import com.wholesale.marketplace.modules.settlement.dto.SettlementDto;
@@ -94,6 +95,14 @@ public class SupplierController {
     @GetMapping("/orders/{id}")
     public SupplierOrderDetailDto order(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         return supplierService.getOrder(user, id);
+    }
+
+    /** Supplier updates the delivery status of their share (PROCESSING/SHIPPED). */
+    @PutMapping("/orders/{id}/fulfillment")
+    public SupplierOrderDetailDto updateFulfillment(@AuthenticationPrincipal User user,
+                                                    @PathVariable UUID id,
+                                                    @Valid @RequestBody UpdateFulfillmentRequest req) {
+        return supplierService.updateFulfillment(user, id, req.status());
     }
 
     // ----- settlements ---------------------------------------------------

@@ -3,6 +3,7 @@ package com.wholesale.marketplace.modules.order;
 import com.wholesale.marketplace.common.dto.PageResponse;
 import com.wholesale.marketplace.modules.order.dto.OrderDetailDto;
 import com.wholesale.marketplace.modules.order.dto.OrderSummaryDto;
+import com.wholesale.marketplace.modules.order.dto.UpdateFulfillmentRequest;
 import com.wholesale.marketplace.modules.order.dto.UpdateOrderStatusRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Section 9.7 — Admin order management. */
 @RestController
 @RequestMapping("/api/v1/admin/orders")
 @PreAuthorize("hasRole('ADMIN')")
@@ -42,5 +42,12 @@ public class AdminOrderController {
     @PutMapping("/{id}/status")
     public OrderSummaryDto updateStatus(@PathVariable UUID id, @Valid @RequestBody UpdateOrderStatusRequest req) {
         return orderService.updateStatus(id, req.status());
+    }
+
+    @PutMapping("/{orderId}/splits/{splitId}/fulfillment")
+    public OrderDetailDto setSplitFulfillment(@PathVariable UUID orderId,
+                                              @PathVariable UUID splitId,
+                                              @Valid @RequestBody UpdateFulfillmentRequest req) {
+        return orderService.adminSetSplitFulfillment(orderId, splitId, req.status());
     }
 }
